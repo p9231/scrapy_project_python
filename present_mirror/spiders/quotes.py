@@ -1,19 +1,27 @@
 import scrapy
+from scrapy.http import FormRequest
+from scrapy.utils.response import open_in_browser
 from ..items import PresentMirrorItem
 
 class QuoteSpider(scrapy.Spider):
     name = 'quotes'
+    page_no = 2
     start_urls = [
-        'https://quotes.toscrape.com/',
-        # 'https://www.spyder-ide.org/'
+        'https://quotes.toscrape.com/login',
+
     ]
 
-    # def parse(self, response):
-    #     title = response.css('title::text').extract()
-    #     yield {'titletext': title}
+    def parse(self, response):
 
-    def _parse(self, response):
+        token = response.css('form input::attr(value)').extract_first()
+        return FormRequest.from_response(response, formdata={
+            'csrf_token': token,
+            'username': "pradeep@gmail.com",
+            'password': '12345'
+        }, callback=self.start_scraping)
 
+    def start_scraping(self, response):
+        open_in_browser(response)
         items = PresentMirrorItem()
 
         all_div_quote = response.css('div.quote')
@@ -28,8 +36,3 @@ class QuoteSpider(scrapy.Spider):
             items['tag'] = tag
 
             yield items
-
-        next_page = response.css('li.next a::attr(href)').get()
-
-        if next_page is not None:
-            yield response.follow(next_page, callback=self._parse)
